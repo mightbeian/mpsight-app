@@ -1,0 +1,68 @@
+name: mpsight
+description: Computer Vision-Based Mpox Lesion Detection System
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Camera functionality
+  camera: ^0.10.5+5
+  
+  # TensorFlow Lite for model inference
+  tflite_flutter: ^0.10.4
+  
+  # Image processing
+  image: ^4.1.3
+  
+  # Charts for visualization
+  fl_chart: ^0.65.0
+  
+  # State management
+  provider: ^6.1.1
+  
+  # Permissions
+  permission_handler: ^11.0.1
+  
+  # Image picker for gallery
+  image_picker: ^1.0.4
+  
+  # Path provider for local storage
+  path_provider: ^2.1.1
+  
+  # Animations
+  flutter_animate: ^4.3.0
+  
+  # SVG support for vector icons
+  flutter_svg: ^2.0.9
+  
+  # Material Design
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/models/
+    - assets/icons/
+    - assets/images/
+  
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
