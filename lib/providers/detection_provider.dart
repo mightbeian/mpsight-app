@@ -23,13 +23,15 @@ class DetectionProvider extends ChangeNotifier {
   bool _isProcessing = false;
   DetectionResult? _lastResult;
   
-  // Class labels matching your YOLOv8 model
+  // Updated class labels matching MSLD v2.0 dataset (6 classes)
+  // Order: Monkeypox, Chickenpox, Measles, Cowpox, HFMD, Healthy
   final List<String> _labels = [
     'Monkeypox',
     'Chickenpox',
     'Measles',
-    'Acne',
-    'Normal Skin',
+    'Cowpox',
+    'HFMD',
+    'Healthy',
   ];
 
   // Getters
@@ -43,7 +45,7 @@ class DetectionProvider extends ChangeNotifier {
     try {
       final options = InterpreterOptions()..threads = 4;
       
-      // Load your YOLOv8 TFLite model
+      // Load your YOLOv8 TFLite model (trained on MSLD v2.0)
       _interpreter = await Interpreter.fromAsset(
         'assets/models/yolov8_skin_classifier.tflite',
         options: options,
@@ -51,7 +53,7 @@ class DetectionProvider extends ChangeNotifier {
       
       _isModelLoaded = true;
       notifyListeners();
-      debugPrint('Model loaded successfully');
+      debugPrint('Model loaded successfully - 6 classes (MSLD v2.0)');
     } catch (e) {
       debugPrint('Error loading model: $e');
       _isModelLoaded = false;
@@ -87,7 +89,7 @@ class DetectionProvider extends ChangeNotifier {
       // Convert to float32 and normalize
       var input = _imageToByteListFloat32(resizedImage);
 
-      // Prepare output tensor
+      // Prepare output tensor for 6 classes
       var output = List.filled(1 * _labels.length, 0.0).reshape([1, _labels.length]);
 
       // Run inference
