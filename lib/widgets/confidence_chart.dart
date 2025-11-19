@@ -10,34 +10,40 @@ class ConfidenceChart extends StatelessWidget {
     required this.result,
   });
 
+  // Updated colors for 6 classes (MSLD v2.0)
   Color _getColorForCondition(String condition) {
     switch (condition) {
       case 'Monkeypox':
-        return const Color(0xFFE74C3C);
+        return const Color(0xFFE74C3C);  // Red - Critical alert
+      case 'Cowpox':
+        return const Color(0xFFD35400);  // Dark Orange - Related orthopoxvirus
       case 'Chickenpox':
-        return const Color(0xFFE67E22);
+        return const Color(0xFFE67E22);  // Orange - Common differential
       case 'Measles':
-        return const Color(0xFFF39C12);
-      case 'Acne':
-        return const Color(0xFF3498DB);
-      case 'Normal Skin':
-        return const Color(0xFF27AE60);
+        return const Color(0xFFF39C12);  // Amber - Vaccine-preventable
+      case 'HFMD':
+        return const Color(0xFF3498DB);  // Blue - Pediatric condition
+      case 'Healthy':
+        return const Color(0xFF27AE60);  // Green - No pathology
       default:
         return Colors.grey;
     }
   }
 
+  // Updated icons for 6 classes
   IconData _getIconForCondition(String condition) {
     switch (condition) {
       case 'Monkeypox':
         return Icons.warning_amber_rounded;
-      case 'Chickenpox':
+      case 'Cowpox':
         return Icons.coronavirus_outlined;
+      case 'Chickenpox':
+        return Icons.bubble_chart_outlined;
       case 'Measles':
         return Icons.sanitizer_outlined;
-      case 'Acne':
-        return Icons.face_outlined;
-      case 'Normal Skin':
+      case 'HFMD':
+        return Icons.child_care_outlined;
+      case 'Healthy':
         return Icons.check_circle_outline;
       default:
         return Icons.help_outline;
@@ -60,7 +66,7 @@ class ConfidenceChart extends StatelessWidget {
         
         // Comparative Chart Title
         Text(
-          'Comparative Analysis',
+          'Comparative Analysis (6 Classes - MSLD v2.0)',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: const Color(0xFF2D3436),
@@ -71,7 +77,7 @@ class ConfidenceChart extends StatelessWidget {
         
         // Bar Chart
         SizedBox(
-          height: 300,
+          height: 320,  // Increased height for 6 classes
           child: BarChart(
             BarChartData(
               alignment: BarChartAlignment.spaceAround,
@@ -119,23 +125,24 @@ class ConfidenceChart extends StatelessWidget {
                           children: [
                             Icon(
                               _getIconForCondition(condition),
-                              size: 20,
+                              size: 18,
                               color: _getColorForCondition(condition),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              condition.split(' ')[0],
+                              condition == 'HFMD' ? 'HFMD' : condition.split(' ')[0],
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.grey[700],
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       );
                     },
-                    reservedSize: 60,
+                    reservedSize: 65,
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -179,7 +186,7 @@ class ConfidenceChart extends StatelessWidget {
                     BarChartRodData(
                       toY: entry.value.value,
                       color: _getColorForCondition(entry.value.key),
-                      width: 24,
+                      width: 20,  // Slightly narrower for 6 classes
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(6),
                       ),
@@ -211,6 +218,7 @@ class ConfidenceChart extends StatelessWidget {
 
   Widget _buildPrimaryCard(BuildContext context) {
     final isMonkeypox = result.primaryCondition == 'Monkeypox';
+    final isHealthy = result.primaryCondition == 'Healthy';
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -218,14 +226,16 @@ class ConfidenceChart extends StatelessWidget {
         gradient: LinearGradient(
           colors: isMonkeypox
               ? [Colors.red[400]!, Colors.red[600]!]
-              : [Colors.green[400]!, Colors.green[600]!],
+              : isHealthy
+                  ? [Colors.green[400]!, Colors.green[600]!]
+                  : [Colors.orange[400]!, Colors.orange[600]!],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isMonkeypox ? Colors.red : Colors.green).withOpacity(0.3),
+            color: (isMonkeypox ? Colors.red : isHealthy ? Colors.green : Colors.orange).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -407,7 +417,7 @@ class ConfidenceChart extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'This is a preliminary screening tool. Always consult a healthcare professional for proper diagnosis and treatment.',
+              'This tool uses MSLD v2.0 for 6-class classification. Always consult a healthcare professional for proper diagnosis and treatment.',
               style: TextStyle(
                 color: Colors.orange[900],
                 fontSize: 11,
