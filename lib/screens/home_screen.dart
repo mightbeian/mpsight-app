@@ -1,10 +1,14 @@
+/// Home Screen
+/// Main dashboard with navigation to all MPSight features
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '../providers/detection_provider.dart';
+import '../providers/comprehensive_detection_provider.dart';
+import '../services/privacy_service.dart';
 import 'camera_screen.dart';
 import 'gallery_screen.dart';
-import '../widgets/feature_card.dart';
+import 'patient_assessment_screen.dart';
+import '../models/patient_data.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,246 +18,230 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isInitializing = true;
+  PatientAssessment? _currentAssessment;
+
   @override
   void initState() {
     super.initState();
-    // Load model on startup
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DetectionProvider>().loadModel();
-    });
+    _initializeModels();
+  }
+
+  Future<void> _initializeModels() async {
+    final provider = context.read<ComprehensiveDetectionProvider>();
+    await provider.loadAllModels();
+    if (mounted) {
+      setState(() => _isInitializing = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              
-              // Header
-              _buildHeader(),
-              
-              const SizedBox(height: 40),
-              
-              // Status Card
-              _buildStatusCard(context),
-              
-              const SizedBox(height: 32),
-              
-              // Feature Cards
-              Text(
-                'Select Detection Method',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF2D3436),
-                ),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(8),
               ),
-              
-              const SizedBox(height: 16),
-              
-              _buildFeatureCards(context),
-              
-              const SizedBox(height: 32),
-              
-              // Info Section
-              _buildInfoSection(context),
-            ],
+              child: const Icon(
+                Icons.remove_red_eye,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'MPSight',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => _showSettings(context),
           ),
+        ],
+      ),
+      body: _isInitializing
+          ? _buildLoadingView()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeCard(context),
+                  const SizedBox(height: 24),
+                  _buildModelStatusCard(context),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Quick Actions',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionGrid(context),
+                  const SizedBox(height: 24),
+                  if (_currentAssessment != null) ...[
+                    _buildCurrentAssessmentCard(context),
+                    const SizedBox(height: 24),
+                  ],
+                  _buildInfoSection(context),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildLoadingView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 24),
+          Text(
+            'Loading AI Models...',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This may take a moment',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard(BuildContext context) {
+    return Card(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'MPSight v2.0',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'AI-Powered Mpox Detection & Severity Assessment',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildFeatureChip('Multi-Class'),
+                const SizedBox(width: 8),
+                _buildFeatureChip('Segmentation'),
+                const SizedBox(width: 8),
+                _buildFeatureChip('Severity'),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(
-                Icons.health_and_safety_outlined,
-                color: const Color(0xFF6C63FF),
-                size: 32,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'MPSight',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF2D3436),
-                    ),
-                  ),
-                  Text(
-                    'Skin Lesion Detection System',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget _buildFeatureChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          color: Colors.white,
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildStatusCard(BuildContext context) {
-    return Consumer<DetectionProvider>(
+  Widget _buildModelStatusCard(BuildContext context) {
+    return Consumer<ComprehensiveDetectionProvider>(
       builder: (context, provider, child) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF6C63FF),
-                const Color(0xFF5A52D5),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF6C63FF).withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  provider.isModelLoaded
-                      ? Icons.check_circle_outline
-                      : Icons.hourglass_empty,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
+                    const Icon(Icons.memory),
+                    const SizedBox(width: 8),
                     Text(
-                      provider.isModelLoaded ? 'System Ready' : 'Loading Model...',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      provider.isModelLoaded
-                          ? 'AI model loaded successfully'
-                          : 'Preparing detection system',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 13,
-                      ),
+                      'AI Models Status',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                _buildModelStatus('Lesion Type Classifier', provider.isLesionTypeLoaded),
+                _buildModelStatus('Disease Classifier', provider.isDiseaseClassifierLoaded),
+                _buildModelStatus('Segmentation (U-Net)', provider.isSegmentationLoaded),
+                _buildModelStatus('Severity Scoring', provider.isSeverityLoaded),
+                _buildModelStatus('Fitzpatrick Classifier', provider.isFitzpatrickLoaded),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildFeatureCards(BuildContext context) {
-    return Column(
-      children: [
-        FeatureCard(
-          icon: Icons.camera_alt_outlined,
-          title: 'Live Camera Scan',
-          description: 'Real-time detection with instant results',
-          color: const Color(0xFF6C63FF),
-          onTap: () {
-            if (context.read<DetectionProvider>().isModelLoaded) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CameraScreen()),
-              );
-            } else {
-              _showModelNotLoadedDialog(context);
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-        FeatureCard(
-          icon: Icons.photo_library_outlined,
-          title: 'Upload from Gallery',
-          description: 'Analyze images from your device',
-          color: const Color(0xFF00B894),
-          onTap: () {
-            if (context.read<DetectionProvider>().isModelLoaded) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GalleryScreen()),
-              );
-            } else {
-              _showModelNotLoadedDialog(context);
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoSection(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.blue[100]!,
-          width: 1,
-        ),
-      ),
+  Widget _buildModelStatus(String name, bool isLoaded) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Icon(
-            Icons.info_outline,
-            color: Colors.blue[700],
-            size: 24,
+            isLoaded ? Icons.check_circle : Icons.error_outline,
+            size: 16,
+            color: isLoaded ? Colors.green : Colors.orange,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'This tool provides preliminary screening. Always consult a healthcare professional for diagnosis.',
-              style: TextStyle(
-                color: Colors.blue[900],
-                fontSize: 12,
-                height: 1.5,
-              ),
+          const SizedBox(width: 8),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 13),
+          ),
+          const Spacer(),
+          Text(
+            isLoaded ? 'Ready' : 'Not Loaded',
+            style: TextStyle(
+              fontSize: 12,
+              color: isLoaded ? Colors.green : Colors.orange,
             ),
           ),
         ],
@@ -261,24 +249,279 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showModelNotLoadedDialog(BuildContext context) {
+  Widget _buildActionGrid(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.1,
+      children: [
+        _buildActionCard(
+          context,
+          'Camera Scan',
+          'Real-time detection',
+          Icons.camera_alt,
+          Colors.blue,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CameraScreen()),
+          ),
+        ),
+        _buildActionCard(
+          context,
+          'Upload Image',
+          'Analyze from gallery',
+          Icons.photo_library,
+          Colors.green,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GalleryScreen()),
+          ),
+        ),
+        _buildActionCard(
+          context,
+          'Patient Info',
+          'Add symptoms & history',
+          Icons.person_add,
+          Colors.orange,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PatientAssessmentScreen(
+                onAssessmentComplete: (assessment) {
+                  setState(() => _currentAssessment = assessment);
+                },
+              ),
+            ),
+          ),
+        ),
+        _buildActionCard(
+          context,
+          'History',
+          'View past analyses',
+          Icons.history,
+          Colors.purple,
+          () => _showComingSoon(context, 'Analysis History'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentAssessmentCard(BuildContext context) {
+    return Card(
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.person, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Current Patient Assessment',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => setState(() => _currentAssessment = null),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Risk Score: ${_currentAssessment!.overallRiskScore}',
+              style: const TextStyle(fontSize: 14),
+            ),
+            Text(
+              'Symptoms reported: ${_currentAssessment!.symptoms.prodromalScore} indicators',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(BuildContext context) {
+    return Card(
+      color: Colors.amber.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.amber.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Important Notice',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'MPSight is a screening assistance tool designed to support healthcare '
+              'professionals. It is NOT a diagnostic device and should not replace '
+              'professional medical evaluation.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.amber.shade900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Settings',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip),
+              title: const Text('Privacy Settings'),
+              onTap: () => _showPrivacySettings(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.info),
+              title: const Text('About MPSight'),
+              onTap: () => _showAbout(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Withdraw Consent'),
+              onTap: () => _withdrawConsent(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPrivacySettings(BuildContext context) {
+    Navigator.pop(context);
+    // TODO: Implement privacy settings screen
+    _showComingSoon(context, 'Privacy Settings');
+  }
+
+  void _showAbout(BuildContext context) {
+    Navigator.pop(context);
+    showAboutDialog(
+      context: context,
+      applicationName: 'MPSight',
+      applicationVersion: '2.0.0',
+      applicationLegalese: '© 2024 MPSight Research Team',
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          'Computer Vision-Based Mpox Lesion Detection and Severity Assessment System',
+        ),
+      ],
+    );
+  }
+
+  void _withdrawConsent(BuildContext context) {
+    Navigator.pop(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text('Model Loading'),
+        title: const Text('Withdraw Consent'),
         content: const Text(
-          'The AI model is still loading. Please wait a moment and try again.',
+          'Are you sure you want to withdraw your consent? This will delete all '
+          'local data and you will need to provide consent again to use the app.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final privacy = context.read<PrivacyService>();
+              await privacy.withdrawConsent('current_user');
+              if (context.mounted) {
+                Navigator.pop(context);
+                // Restart app or navigate to consent screen
+              }
+            },
+            child: const Text('Withdraw'),
           ),
         ],
       ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$feature coming soon!')),
     );
   }
 }
