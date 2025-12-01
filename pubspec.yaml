@@ -1,7 +1,7 @@
 name: mpsight
-description: Computer Vision-Based Mpox Lesion Detection System
+description: "MPSight - Computer Vision-Based Mpox Lesion Detection and Severity Assessment System"
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -42,6 +42,18 @@ dependencies:
   
   # Material Design
   cupertino_icons: ^1.0.6
+  
+  # Privacy & Security
+  crypto: ^3.0.3
+  
+  # Secure Storage
+  flutter_secure_storage: ^9.0.0
+  
+  # UUID generation
+  uuid: ^4.2.1
+  
+  # Date formatting
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:
