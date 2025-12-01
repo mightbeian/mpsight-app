@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../main.dart';
 import '../providers/detection_provider.dart';
 import '../widgets/confidence_chart.dart';
+import '../widgets/severity_quick_access.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -382,7 +383,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 child: SingleChildScrollView(
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
-                  child: ConfidenceChart(result: result),
+                  child: Column(
+                    children: [
+                      ConfidenceChart(result: result),
+                      const SizedBox(height: 16),
+                      SeverityQuickAccess(
+                        detectedCondition: result.primaryCondition,
+                        estimatedLesionCount: 50,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

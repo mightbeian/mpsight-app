@@ -3,11 +3,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/detection_provider.dart';
 import '../providers/comprehensive_detection_provider.dart';
 import '../services/privacy_service.dart';
 import 'camera_screen.dart';
 import 'gallery_screen.dart';
 import 'patient_assessment_screen.dart';
+import 'severity_assessment_screen.dart';
 import '../models/patient_data.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,8 +30,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeModels() async {
-    final provider = context.read<ComprehensiveDetectionProvider>();
-    await provider.loadAllModels();
+    // Load simple detection model for camera/gallery
+    final detectionProvider = context.read<DetectionProvider>();
+    await detectionProvider.loadModel();
+    
+    // Load comprehensive models (optional - can fail gracefully)
+    final comprehensiveProvider = context.read<ComprehensiveDetectionProvider>();
+    await comprehensiveProvider.loadAllModels();
+    
     if (mounted) {
       setState(() => _isInitializing = false);
     }
@@ -78,8 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildWelcomeCard(context),
-                  const SizedBox(height: 24),
-                  _buildModelStatusCard(context),
                   const SizedBox(height: 24),
                   Text(
                     'Quick Actions',
@@ -140,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'MPSight v2.0',
+              'MPSight',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -278,6 +284,17 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const GalleryScreen()),
+          ),
+        ),
+        _buildActionCard(
+          context,
+          'Severity Score',
+          'Calculate Mpox severity',
+          Icons.medical_information,
+          Colors.red,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SeverityAssessmentScreen()),
           ),
         ),
         _buildActionCard(

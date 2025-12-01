@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.mpsight.app"
-    compileSdk 34
+    compileSdk 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -41,8 +41,8 @@ android {
 
     defaultConfig {
         applicationId "com.mpsight.app"
-        minSdk 21
-        targetSdk 34
+        minSdkVersion flutter.minSdkVersion
+        targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

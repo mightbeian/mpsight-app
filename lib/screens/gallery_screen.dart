@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/detection_provider.dart';
 import '../widgets/confidence_chart.dart';
+import '../widgets/severity_quick_access.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -229,8 +230,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
           // Results
           if (_isAnalyzing)
             _buildLoadingCard()
-          else if (_result != null)
+          else if (_result != null) ...[
             ConfidenceChart(result: _result!),
+            const SizedBox(height: 16),
+            SeverityQuickAccess(
+              detectedCondition: _result!.primaryCondition,
+              estimatedLesionCount: 50,
+            ),
+          ],
         ],
       ),
     );

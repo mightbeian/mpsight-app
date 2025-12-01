@@ -5,15 +5,28 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:camera/camera.dart';
 
 import 'providers/detection_provider.dart';
 import 'providers/comprehensive_detection_provider.dart';
+import 'providers/severity_provider.dart';
 import 'services/privacy_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/consent_screen.dart';
 
-void main() {
+// Global list of available cameras
+List<CameraDescription> cameras = [];
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize cameras
+  try {
+    cameras = await availableCameras();
+  } catch (e) {
+    debugPrint('Error initializing cameras: $e');
+  }
+  
   runApp(const MPSightApp());
 }
 
@@ -32,7 +45,12 @@ class MPSightApp extends StatelessWidget {
         ),
         // Legacy detection provider (single model)
         ChangeNotifierProvider(
-          create: (_) => DetectionProvider(),
+          create: (_) {
+            final provider = DetectionProvider();
+            // Load model immediately
+            provider.loadModel();
+            return provider;
+          },
         ),
         // Comprehensive detection provider (multi-model)
         ChangeNotifierProxyProvider<PrivacyService, ComprehensiveDetectionProvider>(
@@ -41,6 +59,10 @@ class MPSightApp extends StatelessWidget {
           ),
           update: (context, privacyService, previous) =>
               previous ?? ComprehensiveDetectionProvider(privacyService: privacyService),
+        ),
+        // Severity assessment provider
+        ChangeNotifierProvider(
+          create: (_) => SeverityProvider(),
         ),
       ],
       child: MaterialApp(
@@ -52,12 +74,11 @@ class MPSightApp extends StatelessWidget {
             brightness: Brightness.light,
           ),
           useMaterial3: true,
-          fontFamily: 'Poppins',
           appBarTheme: const AppBarTheme(
             centerTitle: true,
             elevation: 0,
           ),
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

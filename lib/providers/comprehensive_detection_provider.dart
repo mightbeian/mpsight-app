@@ -620,7 +620,7 @@ class ComprehensiveDetectionProvider extends ChangeNotifier {
       }
     }
 
-    return bytes.reshape([1, size, size, 3]);
+    return bytes.reshape([1, size, size, 3]) as Float32List;
   }
 
   List<SegmentedLesion> _extractLesionsFromMask(

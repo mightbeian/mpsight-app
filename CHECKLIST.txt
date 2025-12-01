@@ -1,0 +1,234 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                   MPSight Model Integration Checklist                ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+PRE-INTEGRATION CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ I have my trained YOLOv8 model (.tflite or .pt file)
+□ My model is trained on MSLD v2.0 dataset (6 classes)
+□ Model input size is 640x640 RGB
+□ Model output is 6 confidence scores
+□ I have Flutter installed and working (flutter doctor)
+□ I have reviewed MODEL_INTEGRATION.md
+
+
+INTEGRATION STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Prepare Model File
+---------------------------
+□ Locate my trained model file
+□ Verify file is not corrupted
+□ Check file size (should be > 1MB)
+
+   If you have .tflite file:
+   □ File is ready to use
+   
+   If you have .pt/.pth file:
+   □ Edit convert_to_tflite.py (line 28)
+   □ Run: python convert_to_tflite.py
+   □ Wait for conversion to complete
+
+
+STEP 2: Place Model in App
+---------------------------
+□ Run helper script: .\place_model.ps1
+   OR
+   □ Manually copy: 
+     copy model.tflite assets\models\mpox_classifier.tflite
+
+□ Verify file is in correct location:
+     assets\models\mpox_classifier.tflite
+
+□ Check file size: 
+     Get-Item assets\models\mpox_classifier.tflite
+
+
+STEP 3: Build and Run
+----------------------
+□ Clean project: flutter clean
+□ Get dependencies: flutter pub get
+□ Run app: flutter run
+
+□ App builds without errors
+□ App launches successfully
+
+
+VERIFICATION CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In Debug Console:
+-----------------
+□ See: "📊 Model Input Shape: [1, 640, 640, 3]"
+□ See: "📊 Model Output Shape: [1, 6]"
+□ See: "📊 Model Classes: [Chickenpox, Cowpox, ...]"
+□ See: "✅ Model loaded successfully and ready for detection"
+□ No error messages about model loading
+
+In App:
+-------
+□ Home screen displays correctly
+□ Can tap "Capture Photo" button
+□ Can tap "Gallery" button
+□ Camera opens (if testing camera)
+□ Can select image from gallery
+
+Testing Detection:
+------------------
+□ Select/capture a test image
+□ Detection completes (wait a few seconds)
+□ Results screen shows predictions
+□ Confidence scores are displayed
+□ Primary condition is highlighted
+□ Confidence chart renders
+
+In Debug Console During Detection:
+----------------------------------
+□ See: "🔍 detectSkinCondition called"
+□ See: "📸 Decoding image..."
+□ See: "🖼️ Resizing image to 640x640..."
+□ See: "🤖 Running inference..."
+□ See: "✅ Processing results..."
+□ See: "🎯 Primary condition: <class> (<confidence>%)"
+□ No errors or crashes
+
+
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Issue: Model not loading
+-------------------------
+□ Check file size (should be > 1MB, not 67 bytes)
+□ Verify file is at: assets\models\mpox_classifier.tflite
+□ Run: flutter clean && flutter pub get
+□ Check for error message in console
+□ Ensure model is valid TFLite format
+
+Issue: Wrong predictions
+-------------------------
+□ Verify classes match training order
+□ Check model was trained on MSLD v2.0
+□ Ensure model input is 640x640
+□ Verify model output is 6 classes
+
+Issue: App crashes on detection
+--------------------------------
+□ Check model input/output shapes
+□ Verify model is not corrupted
+□ Look for tensor mismatch errors in console
+□ Ensure sufficient device memory
+
+Issue: Slow inference (> 2 seconds)
+------------------------------------
+□ Test on physical device (not emulator)
+□ Verify NNAPI is enabled
+□ Consider using quantized model
+□ Check device specifications
+
+
+PERFORMANCE TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Test with multiple images (10+)
+□ Test with different lighting conditions
+□ Test with blurry images
+□ Test with different skin tones
+□ Measure average inference time
+□ Check prediction accuracy against ground truth
+□ Test on low-end device
+□ Test on high-end device
+□ Check memory usage
+□ Monitor battery consumption
+
+
+POST-INTEGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Documentation:
+--------------
+□ Document model version used
+□ Record model performance metrics
+□ Note any issues encountered
+□ Save training logs/metrics
+
+Version Control:
+----------------
+□ Commit model file (if not too large)
+□ Tag release with model version
+□ Update README with model info
+□ Document any code changes made
+
+Deployment:
+-----------
+□ Test on multiple devices
+□ Create release build: flutter build apk
+□ Test release build thoroughly
+□ Prepare for distribution
+
+
+QUICK REFERENCE COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Place model (interactive)
+.\place_model.ps1
+
+# Check model file
+Get-Item assets\models\mpox_classifier.tflite
+
+# Clean and rebuild
+flutter clean
+flutter pub get
+flutter run
+
+# Build release APK
+flutter build apk --release
+
+# Check Flutter environment
+flutter doctor -v
+
+# Run with verbose logging
+flutter run -v
+
+
+SUPPORT RESOURCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Documentation Files:
+--------------------
+• INTEGRATION_SUMMARY.md    - Overview and status
+• MODEL_INTEGRATION.md      - Detailed integration guide
+• assets/models/README.md   - Model specifications
+
+Helper Scripts:
+---------------
+• place_model.ps1           - Interactive model placement
+• convert_to_tflite.py      - PyTorch to TFLite conversion
+
+Key Code Files:
+---------------
+• lib/providers/detection_provider.dart  - Model loading & inference
+• lib/screens/camera_screen.dart         - Camera integration
+• lib/screens/gallery_screen.dart        - Gallery integration
+• pubspec.yaml                           - Dependencies & assets
+
+
+COMPLETION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Model successfully integrated
+□ All verification tests passed
+□ Performance is acceptable
+□ Ready for production use
+
+Congratulations! Your model is integrated and working! 🎉
+
+
+═══════════════════════════════════════════════════════════════════════
+Date Completed: _________________    Completed By: ___________________
+Model Version: __________________    Performance: ____________________
+Notes:
+
+
+
+═══════════════════════════════════════════════════════════════════════

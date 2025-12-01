@@ -85,7 +85,7 @@ class ConfidenceChart extends StatelessWidget {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (group) => Colors.black87,
+                  tooltipBgColor: Colors.black87,
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     return BarTooltipItem(
                       '${sortedEntries[group.x.toInt()].key}\n',

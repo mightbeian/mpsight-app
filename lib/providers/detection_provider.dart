@@ -42,20 +42,31 @@ class DetectionProvider extends ChangeNotifier {
 
   // Initialize the TFLite model
   Future<void> loadModel() async {
+    debugPrint('🔄 Starting model load...');
     try {
       final options = InterpreterOptions()..threads = 4;
       
+      debugPrint('📂 Loading model: assets/models/best_fp32.tflite');
       // Load your YOLOv8 TFLite model (trained on MSLD v2.0)
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/yolov8_skin_classifier.tflite',
+        'assets/models/best_fp32.tflite',
         options: options,
       );
       
+      // Get input/output tensor info
+      final inputTensors = _interpreter!.getInputTensors();
+      final outputTensors = _interpreter!.getOutputTensors();
+      
+      debugPrint('📊 Input shape: ${inputTensors.first.shape}');
+      debugPrint('📊 Output shape: ${outputTensors.first.shape}');
+      debugPrint('📊 Model classes: $_labels');
+      
       _isModelLoaded = true;
       notifyListeners();
-      debugPrint('Model loaded successfully - 6 classes (MSLD v2.0)');
-    } catch (e) {
-      debugPrint('Error loading model: $e');
+      debugPrint('✅ Model loaded successfully - 6 classes (MSLD v2.0)');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading model: $e');
+      debugPrint('Stack trace: $stackTrace');
       _isModelLoaded = false;
       notifyListeners();
     }
@@ -63,22 +74,28 @@ class DetectionProvider extends ChangeNotifier {
 
   // Process image for detection
   Future<DetectionResult?> detectSkinCondition(Uint8List imageBytes) async {
+    debugPrint('🔍 Detection requested...');
+    
     if (!_isModelLoaded || _interpreter == null) {
-      debugPrint('Model not loaded');
+      debugPrint('❌ Model not loaded! isModelLoaded=$_isModelLoaded, interpreter=${_interpreter != null}');
       return null;
     }
 
+    debugPrint('✅ Model ready, starting detection...');
     _isProcessing = true;
     notifyListeners();
 
     try {
       // Decode image
+      debugPrint('📷 Decoding image (${imageBytes.length} bytes)...');
       img.Image? image = img.decodeImage(imageBytes);
       if (image == null) {
         throw Exception('Failed to decode image');
       }
+      debugPrint('✅ Image decoded: ${image.width}x${image.height}');
 
       // Preprocess image (resize to 640x640 for YOLOv8)
+      debugPrint('🔄 Resizing to 640x640...');
       img.Image resizedImage = img.copyResize(
         image,
         width: 640,
@@ -87,13 +104,23 @@ class DetectionProvider extends ChangeNotifier {
       );
 
       // Convert to float32 and normalize
+      debugPrint('🔄 Converting to Float32...');
       var input = _imageToByteListFloat32(resizedImage);
+      var inputReshaped = input.reshape([1, 640, 640, 3]);
 
       // Prepare output tensor for 6 classes
       var output = List.filled(1 * _labels.length, 0.0).reshape([1, _labels.length]);
 
       // Run inference
-      _interpreter!.run(input, output);
+      debugPrint('🤖 Running inference...');
+      _interpreter!.run(inputReshaped, output);
+      debugPrint('✅ Inference complete!');
+
+      // Debug raw output
+      debugPrint('🔍 Raw model output:');
+      for (int i = 0; i < _labels.length; i++) {
+        debugPrint('  [$i] ${_labels[i]}: ${output[0][i]}');
+      }
 
       // Process results
       Map<String, double> confidences = {};
@@ -101,19 +128,37 @@ class DetectionProvider extends ChangeNotifier {
       String primaryCondition = '';
 
       for (int i = 0; i < _labels.length; i++) {
-        double confidence = (output[0][i] as double) * 100;
+        // Model outputs raw logits or probabilities (0-1 range)
+        // Don't multiply by 100 yet - check the raw values first
+        double rawValue = output[0][i] as double;
+        double confidence = rawValue;
+        
+        // If values are in 0-1 range, multiply by 100 for percentage
+        if (rawValue <= 1.0) {
+          confidence = rawValue * 100;
+        }
+        
         confidences[_labels[i]] = confidence;
         
-        if (confidence > maxConfidence) {
-          maxConfidence = confidence;
+        if (rawValue > maxConfidence) {
+          maxConfidence = rawValue;
           primaryCondition = _labels[i];
         }
       }
 
+      // Convert max confidence to percentage if needed
+      double displayConfidence = maxConfidence <= 1.0 ? maxConfidence * 100 : maxConfidence;
+
+      debugPrint('📊 Results: $primaryCondition (${displayConfidence.toStringAsFixed(1)}%)');
+      debugPrint('📊 All confidences:');
+      confidences.forEach((label, conf) {
+        debugPrint('  $label: ${conf.toStringAsFixed(2)}%');
+      });
+
       _lastResult = DetectionResult(
         confidences: confidences,
         primaryCondition: primaryCondition,
-        primaryConfidence: maxConfidence,
+        primaryConfidence: displayConfidence,
         timestamp: DateTime.now(),
       );
 
@@ -121,8 +166,9 @@ class DetectionProvider extends ChangeNotifier {
       notifyListeners();
 
       return _lastResult;
-    } catch (e) {
-      debugPrint('Error during detection: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error during detection: $e');
+      debugPrint('Stack trace: $stackTrace');
       _isProcessing = false;
       notifyListeners();
       return null;
@@ -132,19 +178,18 @@ class DetectionProvider extends ChangeNotifier {
   // Convert image to Float32List for model input
   Float32List _imageToByteListFloat32(img.Image image) {
     var convertedBytes = Float32List(1 * 640 * 640 * 3);
-    var buffer = Float32List.view(convertedBytes.buffer);
     int pixelIndex = 0;
 
     for (int i = 0; i < 640; i++) {
       for (int j = 0; j < 640; j++) {
         var pixel = image.getPixel(j, i);
-        buffer[pixelIndex++] = pixel.r / 255.0;
-        buffer[pixelIndex++] = pixel.g / 255.0;
-        buffer[pixelIndex++] = pixel.b / 255.0;
+        convertedBytes[pixelIndex++] = pixel.r / 255.0;
+        convertedBytes[pixelIndex++] = pixel.g / 255.0;
+        convertedBytes[pixelIndex++] = pixel.b / 255.0;
       }
     }
 
-    return convertedBytes.reshape([1, 640, 640, 3]);
+    return convertedBytes;
   }
 
   void clearResults() {
